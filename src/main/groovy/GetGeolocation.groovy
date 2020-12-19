@@ -2,34 +2,10 @@ import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.*
 import com.drew.metadata.exif.GpsDescriptor
 import com.drew.metadata.exif.GpsDirectory
-
-class GetMetadata {
+import groovy.json.JsonSlurper
+class GetGeolocation {
     static boolean isNegative = false
-    static void main(String[] args) {
-        try{
-            String filePath = 'D:\\neg988021.jpg'
-            InputStream imageInputStream = new FileInputStream(filePath)
-            String[] geo_code = new String[2]
-            geo_code = getGeoData(filePath) //reading the geodata from the Exif
-            ReverseGeolocatingAPI reverseGeocodeAPICall = new ReverseGeolocatingAPI()
-            String[] latitude = filterCoordinates(geo_code[0])
-            String[] longitude = filterCoordinates(geo_code[1])
-            double filteredLatitude = toNumerics(latitude[0], latitude[1])
-            double filteredLongitude = toNumerics(longitude[0], longitude[1])
-            String result = reverseGeocodeAPICall.getLocationName(filteredLatitude, filteredLongitude)
-            println(result)
-        }
-        catch (FileNotFoundException e){
-            println("File Not Found")
-            e.printStackTrace()
-        }
-        catch (NullPointerException e){
-            println('No GPS Information in the File')
-            e.printStackTrace()
-        }
-    }
-
-    static String[] getGeoData(String filePath) {
+    String[] getGeoData(String filePath) {
         String[] geo_code = new String[2]
         InputStream imageInputStream = new FileInputStream(filePath)
         Metadata metadata = ImageMetadataReader.readMetadata(imageInputStream)
@@ -41,24 +17,24 @@ class GetMetadata {
             //println(latitude.class.simpleName)
             geo_code[0] = latitude
             geo_code[1] = longitude
-            println("Latitude : " + latitude)
-            println("Longitude : " + longitude)
+            println("The Latitude is : " + latitude)
+            println("The Longitude is : " + longitude)
             return geo_code
         }
         catch (NullPointerException e)
         {
-            println('No Geodata')
+            println('No Geodata found inside the file')
             e.printStackTrace()
         }
     }
 
-    static String[] filterCoordinates(String geoPosition) {
+    String[] filterCoordinates(String geoPosition) {
         String[] to_return = new String[2]
         char[] geoPos = geoPosition.toCharArray()
         for (i in 0..<geoPos.length) {
             char ch = geoPosition.charAt(i)
             int intChar = (int) ch
-            if (geoPos[0]=='-'){
+            if (geoPos[0] == '-'){
                 isNegative = true
                 switch (intChar) {
                     case 176:
@@ -81,7 +57,7 @@ class GetMetadata {
         return to_return
     }
 
-    static double toNumerics(String integerPart, String decimalPart) {
+    double toNumerics(String integerPart, String decimalPart) {
         int t
         t = integerPart.toInteger()//convert Integer part which is String to Integer
         String minutes = '', seconds = '' //to store minutes and seconds of the coordinate
@@ -93,13 +69,37 @@ class GetMetadata {
             }
         }
         double min = (minutes.toDouble() + seconds.toDouble()/60)/60 //converting minutes and seconds to degree
-        //println(t+min)
         if (isNegative){
             return (t*-1-min)
         }
-
         else{
             return t + min
+        }
+    }
+
+    String getLocationName(double latitude, double longitude)throws FileNotFoundException {
+        //make connection and accept the response in text form
+        def tokenCode = 'pk.17e12176634dca0bb1707cc3d0d7d929'
+        def uri = 'https://us1.locationiq.com/v1/reverse.php?key=' + tokenCode + '&lat=' + latitude + '&lon=' + longitude + '=&format=json'
+        def url = new URL(uri)
+        def response = new URL(uri).text
+        HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection()
+        if (httpURLConnection.responseCode != 200) {
+            System.exit(0)
+            return 'Location cannot be defined'
+        }
+        else {
+            println(response)
+            def jsonSlurper = new JsonSlurper()
+            //use jSonSlurper to convert the text into pretty json
+            Object ob = jsonSlurper.parseText(response)
+            def linkedHashMap = [:]
+            def address = ''
+            ob.each {
+                linkedHashMap << it
+                address = linkedHashMap.get('display_name')
+            }
+            return address
         }
     }
 }
