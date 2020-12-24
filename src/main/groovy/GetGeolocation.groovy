@@ -3,9 +3,15 @@ import com.drew.metadata.*
 import com.drew.metadata.exif.GpsDescriptor
 import com.drew.metadata.exif.GpsDirectory
 import groovy.json.JsonSlurper
+
 class GetGeolocation {
+    static String filePath
+    GetGeolocation(String filePath){
+        this.filePath = filePath
+    }
+
     static boolean isNegative = false
-    String[] getGeoData(String filePath) {
+    static String[] getGeoData() {
         String[] geo_code = new String[2]
         InputStream imageInputStream = new FileInputStream(filePath)
         Metadata metadata = ImageMetadataReader.readMetadata(imageInputStream)
@@ -24,17 +30,18 @@ class GetGeolocation {
         catch (NullPointerException e)
         {
             println('No Geodata found inside the file')
-            e.printStackTrace()
+            println(e)
+            return System.exit(0)
         }
     }
 
-    String[] filterCoordinates(String geoPosition) {
+    static String[] filterCoordinates(String geoPosition) {
         String[] to_return = new String[2]
         char[] geoPos = geoPosition.toCharArray()
         for (i in 0..<geoPos.length) {
             char ch = geoPosition.charAt(i)
             int intChar = (int) ch
-            if (geoPos[0] == '-'){
+            if (geoPos[0] == '-' as char){
                 isNegative = true
                 switch (intChar) {
                     case 176:
@@ -57,13 +64,13 @@ class GetGeolocation {
         return to_return
     }
 
-    double toNumerics(String integerPart, String decimalPart) {
+    static double toNumerics(String integerPart, String decimalPart) {
         int t
         t = integerPart.toInteger()//convert Integer part which is String to Integer
         String minutes = '', seconds = '' //to store minutes and seconds of the coordinate
         for (int i = 0; i < decimalPart.length(); i++) {
             char ch = decimalPart.charAt(i)
-            if (ch == '\'') {
+            if (ch == '\'' as char) {
                 minutes = decimalPart.substring(0, i)
                 seconds = decimalPart.substring(i + 2, decimalPart.length() - 1)
             }
@@ -77,29 +84,29 @@ class GetGeolocation {
         }
     }
 
-    String getLocationName(double latitude, double longitude)throws FileNotFoundException {
+    static String getLocationName(double latitude, double longitude) {
         //make connection and accept the response in text form
         def tokenCode = 'pk.17e12176634dca0bb1707cc3d0d7d929'
         def uri = 'https://us1.locationiq.com/v1/reverse.php?key=' + tokenCode + '&lat=' + latitude + '&lon=' + longitude + '=&format=json'
         def url = new URL(uri)
-        def response = new URL(uri).text
         HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection()
-        if (httpURLConnection.responseCode != 200) {
-            System.exit(0)
-            return 'Location cannot be defined'
+        int responseCode = httpURLConnection.getResponseCode()
+        def responseAddress = ''
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            responseAddress = responseCode + ': Address Not Found\nThere is no Human Settlement found, not that we could find on the Settlement DataBase'
+            return responseAddress
         }
         else {
-            println(response)
-            def jsonSlurper = new JsonSlurper()
-            //use jSonSlurper to convert the text into pretty json
-            Object ob = jsonSlurper.parseText(response)
+            def responseText = new URL(uri).text
+            def jsonSlurper = new JsonSlurper() //use jSonSlurper to convert the text into pretty json
+            Object ob = jsonSlurper.parseText(responseText)
             def linkedHashMap = [:]
-            def address = ''
             ob.each {
                 linkedHashMap << it
-                address = linkedHashMap.get('display_name')
+                responseAddress = linkedHashMap.get('display_name')
             }
-            return address
+            responseAddress = 'The address of the Photo is ' + responseAddress
+            return responseAddress
         }
     }
 }
