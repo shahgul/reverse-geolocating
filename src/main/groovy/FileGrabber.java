@@ -1,6 +1,4 @@
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
@@ -13,11 +11,15 @@ public class FileGrabber extends Application{
     Button button;
     Stage window;
     File file;
-    static String s;
+    static String filePath;
 
-    public static void main(String[] args) {
+    public static String test(){
+        return filePath;
+    }
+
+    public static void mainMethodJavaFX(String[] args) {
         launch(args);
-        System.out.println(s);
+        System.out.println(test());
     }
 
     @Override
@@ -26,13 +28,13 @@ public class FileGrabber extends Application{
         window = primaryStage;
         primaryStage.setTitle("Geolocating Window");
         button = new Button();
-        button.setText("Click Me");
+        button.setText("Click to Open File");
         FileChooser fileChooser = new FileChooser();
         //File selectedFile;
         button.setOnAction(event -> {
             file = fileChooser.showOpenDialog(window);
             System.out.println(file);
-            s = file.getPath();
+            filePath = file.getPath();
         });
         StackPane layout = new StackPane();
         layout.getChildren().add(button);
