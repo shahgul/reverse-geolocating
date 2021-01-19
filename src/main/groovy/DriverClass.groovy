@@ -1,6 +1,6 @@
 class DriverClass {
     static void main(String[] args) {
-        def filePath = 'D:\\neg988021.jpg'
+        def filePath = 'D:\\GPS\\gps988021.jpg'
         GetGeolocation getGeolocation = new GetGeolocation(filePath)
         def geo_code = getGeolocation.getGeoData() //reading the geodata from the Exif
         String[] latitude = getGeolocation.filterCoordinates(geo_code[0])
